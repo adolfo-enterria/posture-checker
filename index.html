@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Posture Checker</title>
+  <meta name="description" content="Local webcam posture coach. Video never leaves your computer." />
+  <link id="favicon" rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='46' fill='%235b86ff'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body data-phase="welcome">
+  <div id="banner" class="banner" role="alert" hidden>
+    <svg class="banner-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 2 21h20L12 3Zm0 6v5m0 3v.01" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <div>
+      <div id="bannerTitle" class="banner-title">Fix your posture</div>
+      <div id="bannerFix" class="banner-fix"></div>
+    </div>
+  </div>
+
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+        <circle cx="16" cy="7" r="4.2" fill="currentColor"/>
+        <path d="M16 13v12M9 16.5c2.2-1.6 4.5-2.4 7-2.4s4.8.8 7 2.4" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+      <span class="brand-name">Posture</span>
+      <span class="brand-tag" title="Video is processed in this tab and never uploaded or recorded">local · private</span>
+    </div>
+    <div id="status" class="status" data-kind="idle" aria-live="polite">
+      <span class="dot"></span><span id="statusText">Not started</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- Camera -->
+    <section class="card camera-card">
+      <div class="stage-wrap">
+        <div id="stage" class="stage mirrored">
+          <video id="video" playsinline muted></video>
+          <canvas id="overlay"></canvas>
+
+          <div id="graceWrap" class="grace" hidden>
+            <div class="grace-label" id="graceLabel">Alert in 5s</div>
+            <div class="grace-track"><div id="graceFill" class="grace-fill"></div></div>
+          </div>
+
+          <div id="coach" class="coach" hidden>
+            <div id="coachIssue" class="coach-issue"></div>
+            <div id="coachFix" class="coach-fix"></div>
+          </div>
+
+          <div id="stageNote" class="stage-note" hidden>
+            <div id="stageNoteTitle" class="stage-note-title"></div>
+            <div id="stageNoteText" class="stage-note-text"></div>
+          </div>
+        </div>
+
+        <!-- Onboarding / calibration panel -->
+        <div id="panel" class="panel">
+          <div data-step="welcome" class="panel-step">
+            <h2>Your posture coach</h2>
+            <p>Watches your head and shoulders through the webcam and nudges you when you slouch. Video is processed right here in this tab. Nothing is uploaded or recorded.</p>
+            <button id="startBtn" class="btn primary big">Start camera</button>
+            <p id="startMsg" class="panel-msg" role="status"></p>
+          </div>
+
+          <div data-step="frame" class="panel-step" hidden>
+            <h2>Frame yourself</h2>
+            <ul class="checklist" id="frameChecks">
+              <li data-check="head">Head in view</li>
+              <li data-check="shoulders">Both shoulders in view</li>
+              <li data-check="facing">Facing the camera</li>
+              <li data-check="distance">Good distance</li>
+              <li data-check="light">Enough light</li>
+            </ul>
+            <p class="panel-hint">Tip: put the camera roughly at eye level, centered on you, about an arm's length away.</p>
+            <button id="toCalibrateBtn" class="btn primary" disabled>Continue</button>
+          </div>
+
+          <div data-step="prep" class="panel-step" hidden>
+            <h2>Sit in your best posture</h2>
+            <ul class="tips">
+              <li>Back against the chair, hips all the way back</li>
+              <li>Shoulders relaxed and level</li>
+              <li>Ears stacked over shoulders, chin level</li>
+              <li>Look at the screen as you normally would</li>
+            </ul>
+            <div class="row-btns">
+              <button id="calibrateGoBtn" class="btn primary">Calibrate (3s)</button>
+              <button id="prepCancelBtn" class="btn ghost" hidden>Cancel</button>
+            </div>
+          </div>
+
+          <div data-step="capture" class="panel-step" hidden>
+            <div class="capture">
+              <svg viewBox="0 0 44 44" class="capture-ring" aria-hidden="true"><circle cx="22" cy="22" r="19"/><circle id="captureArc" cx="22" cy="22" r="19"/></svg>
+              <div>
+                <h2 id="captureTitle">Hold still…</h2>
+                <p>Keep your best posture.</p>
+              </div>
+            </div>
+          </div>
+
+          <div data-step="result" class="panel-step" hidden>
+            <h2 id="resultTitle"></h2>
+            <ul id="resultList" class="result-list"></ul>
+            <div class="row-btns">
+              <button id="retryBtn" class="btn primary">Try again</button>
+              <button id="acceptBtn" class="btn ghost" hidden>Use anyway</button>
+              <button id="resultCancelBtn" class="btn ghost" hidden>Keep previous calibration</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button id="recalibrateBtn" class="btn" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3M20 12a8 8 0 0 1-14 5.3M18 3v4h-4M6 21v-4h4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Recalibrate
+        </button>
+        <div class="snooze">
+          <button id="snoozeBtn" class="btn" disabled aria-haspopup="menu" aria-expanded="false" aria-controls="snoozeMenu">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4H4l6 7H4m10-3h6l-6 8h6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="snoozeLabel">Snooze</span>
+          </button>
+          <div id="snoozeMenu" class="menu" role="menu" hidden>
+            <button role="menuitem" data-min="5">5 minutes</button>
+            <button role="menuitem" data-min="15">15 minutes</button>
+            <button role="menuitem" data-min="30">30 minutes</button>
+          </div>
+        </div>
+        <span id="calibInfo" class="calib-info">Not calibrated</span>
+      </div>
+    </section>
+
+    <!-- Side -->
+    <aside class="side">
+      <section class="card about" data-show="setup">
+        <h3>How it works</h3>
+        <ol class="how">
+          <li><b>Frame yourself.</b> Head and both shoulders in view, facing the screen.</li>
+          <li><b>Calibrate.</b> Sit in your best posture for 3 seconds. That becomes your target.</li>
+          <li><b>Work normally.</b> If you drift from it for a few seconds, you get a gentle beep and a notification, even when this tab is in the background.</li>
+        </ol>
+        <p class="about-privacy">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 5 6v5c0 4.5 3 8.5 7 10 4-1.5 7-5.5 7-10V6l-7-3Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+          The pose model runs inside your browser. No video or images are uploaded or saved. Only your calibration and daily totals are stored, in this browser.
+        </p>
+      </section>
+
+      <section class="card score-card" data-show="monitor">
+        <div class="ring-wrap">
+          <svg viewBox="0 0 120 120" class="ring" aria-hidden="true">
+            <circle class="ring-bg" cx="60" cy="60" r="52"/>
+            <circle id="ringArc" class="ring-arc" cx="60" cy="60" r="52"/>
+          </svg>
+          <div class="ring-center">
+            <div id="scoreNow" class="score-now">–</div>
+            <div class="score-lbl">posture score</div>
+          </div>
+        </div>
+        <div class="score-side">
+          <div class="kv"><span>Average score</span><b id="scoreAvg">–</b></div>
+          <div class="kv"><span>Time sitting well</span><b id="goodPct">–</b></div>
+          <div class="kv"><span>Alerts</span><b id="alertCount">0</b></div>
+          <div class="kv"><span>Current streak</span><b id="streak">0:00</b></div>
+          <div class="kv"><span>Best streak</span><b id="bestStreak">0:00</b></div>
+        </div>
+      </section>
+
+      <section class="card" data-show="monitor">
+        <div class="card-head">
+          <h3>Checks</h3>
+          <span class="hint"><span class="limit-key" aria-hidden="true"></span> alert line</span>
+        </div>
+        <ul id="checks" class="checks"></ul>
+      </section>
+
+      <section class="card" data-show="monitor">
+        <div class="card-head">
+          <h3>Last 15 minutes</h3>
+          <span class="hint" id="awayInfo"></span>
+        </div>
+        <div class="timeline-wrap">
+          <canvas id="timeline" class="timeline" height="64"></canvas>
+          <div id="timelineEmpty" class="timeline-empty">Your posture over time will show up here.</div>
+        </div>
+        <div class="axis"><span>15 min ago</span><span>now</span></div>
+      </section>
+
+      <section class="card" data-show="monitor">
+        <div class="card-head"><h3>This week</h3><span class="hint">time sitting well</span></div>
+        <div id="week" class="week"></div>
+      </section>
+
+      <section class="card settings">
+        <div class="card-head"><h3>Settings</h3></div>
+        <div class="setting">
+          <span id="sensLbl">Sensitivity</span>
+          <div class="seg" id="sensitivity" role="radiogroup" aria-labelledby="sensLbl">
+            <button data-v="low">Relaxed</button>
+            <button data-v="medium">Normal</button>
+            <button data-v="high">Strict</button>
+          </div>
+        </div>
+        <label class="setting">
+          <span>Alert after <b id="graceVal">5</b>s of bad posture</span>
+          <input id="grace" type="range" min="3" max="30" value="5" />
+        </label>
+        <label class="setting">
+          <span>Break reminder</span>
+          <select id="breakEvery">
+            <option value="0">Off</option>
+            <option value="30">Every 30 min</option>
+            <option value="45">Every 45 min</option>
+            <option value="60">Every 60 min</option>
+          </select>
+        </label>
+        <label class="setting"><span>Sound</span><input id="sound" type="checkbox" class="toggle" checked /></label>
+        <label class="setting">
+          <span>Desktop notifications <small id="notifyHint" class="hint"></small></span>
+          <input id="notify" type="checkbox" class="toggle" checked />
+        </label>
+        <label class="setting"><span>Mirror video</span><input id="mirror" type="checkbox" class="toggle" checked /></label>
+        <label class="setting"><span>Show skeleton</span><input id="skeleton" type="checkbox" class="toggle" checked /></label>
+        <div class="setting-actions">
+          <button id="testAlertBtn" class="btn small">Preview alert</button>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
