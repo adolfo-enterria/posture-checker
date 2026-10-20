@@ -1,3 +1,5 @@
 node_modules/
 tools/out/
 tools/scratch/
+.aider*
+_site/

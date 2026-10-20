@@ -16,6 +16,7 @@ const OUT = join(ROOT, "tools", "out");
 const PORT = 8123;
 const BASE = `http://localhost:${PORT}`;
 const headed = process.argv.includes("--headed");
+const demoOnly = process.argv.includes("--demo-only");
 
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".json": "application/json" };
 const server = createServer(async (req, res) => {
@@ -169,7 +170,7 @@ try {
 
   // ------------------------------------------------- real camera + pose model
   // (Background-tab behaviour is covered by tools/background-check.mjs.)
-  {
+  if (!demoOnly) {
     const { page, context, errors } = await newPage("/");
     await page.screenshot({ path: join(OUT, "0-welcome.png") });
     await page.click("#startBtn");

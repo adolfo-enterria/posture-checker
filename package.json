@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "python -m http.server 8000 --bind 127.0.0.1",
-    "test": "node --test test/",
+    "test": "node --test test/*.test.js",
     "smoke": "node tools/smoke.mjs",
+    "smoke:demo": "node tools/smoke.mjs --demo-only",
     "bgcheck": "node tools/background-check.mjs"
   },
   "devDependencies": {
